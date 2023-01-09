@@ -57,7 +57,6 @@ class HospitalandCompBlood {
 }
 
 function BloodUnit(bloodbanks, Comp_Blood) {
-  console.log(Comp_Blood);
   const BloodbankDetails = [];
   for (let i = 0; i < bloodbanks.length; i++) {
     const blood_bank = bloodbanks[i];
@@ -91,19 +90,19 @@ router.post("/requirement",async(req, res)=> {
 try{
   let bloodtype = req.body.blood_group;
   let city = req.body.city;
-
   const BloodBank = db.collection('bloodbanks');
   const Comp_Blood = getCompatibleBloodTypes(bloodtype);
-  
 
   // BloodBank.find({ city: city }, function (err, bloodbanks) {
   //   if (err) {
   //     console.log(err);
   //   }
-  const bloodbanks = await BloodBank.where('city', '==', city).get();
-
+  const snapshot = await BloodBank.where('city', '==', city).get();
+  let bloodbanks=[];
+  snapshot.forEach((doc) => {
+    bloodbanks.push({ id: doc.id, ...doc.data() });
+  });
     const BloodBankDetails = BloodUnit(bloodbanks, Comp_Blood);
-    console.log(BloodBankDetails);
     res
     .cookie('BloodBankDeatils',BloodBankDetails)
     .send(BloodBankDetails)
@@ -118,8 +117,6 @@ try{
 
   router.get("/requirement",async(req, res)=> {
 
-
-
     try{
       let bloodtype = req.body.blood_group;
       let city = req.body.city;
@@ -127,11 +124,6 @@ try{
       const BloodBank = db.collection('bloodbanks');
       const Comp_Blood = getCompatibleBloodTypes(bloodtype);
       
-    
-      // BloodBank.find({ city: city }, function (err, bloodbanks) {
-      //   if (err) {
-      //     console.log(err);
-      //   }
       const bloodbanks = await BloodBank.where('city', '==', city).get();
     
         const BloodBankDetails = BloodUnit(bloodbanks, Comp_Blood);
@@ -176,10 +168,13 @@ try{
     city: req.body.city,
     phoneNumber: req.body.phoneNumber,
   };
-  const d = await donors.add(donor);
+  await donors.add(donor);
   const BloodBank = db.collection('bloodbanks');
-  const bloodbanks = await BloodBank.where('city', '==', req.body.city).get();
-    
+  const snapshot = await BloodBank.where('city', '==', req.body.city).get();
+  let bloodbanks=[];
+  snapshot.forEach((doc) => {
+    bloodbanks.push({ id: doc.id, ...doc.data() });
+  });
   
     res.cookie('bloodbank',{bloodbanks}, {
       httpOnly: true,
@@ -202,10 +197,9 @@ router.get("/donor", async (req, res)=> {
 
 router.get("/bloodBank", restrictToBloodBank, async (req, res) => {
   try {
-    const BloodBank = db.collection('bloodbanks');
-    console.log(req.id);
-    const id = req.id;
-    const RequiredBloodBank = await BloodBank.where('id', '==',id ).get();
+    const docRef = db.collection("bloodbanks").doc(req.id);
+    const doc = await docRef.get();
+    const RequiredBloodBank = doc.data();
     return res
       .status(200)
       .json({ success: true, BloodUnit: RequiredBloodBank.BloodGroup });
@@ -218,8 +212,9 @@ router.get("/bloodBank", restrictToBloodBank, async (req, res) => {
 router.post("/bloodBank/update", restrictToBloodBank, async (req, res) => {
   try {
     const blood_available = req.body;
-    const BloodBank = db.collection('bloodbanks');
-    const RequiredBloodBank = await BloodBank.where('id', '==',id ).get();
+    const docRef = db.collection("bloodbanks").doc(req.id);
+    const doc = await docRef.get();
+    const RequiredBloodBank = doc.data();
 
     const blood = RequiredBloodBank.BloodGroup;
     blood[blood_available.bloodGroup] =blood_available.unit;
@@ -236,11 +231,13 @@ router.post("/bloodBank/update", restrictToBloodBank, async (req, res) => {
     });
     blood_unit[blood_available] = parseInt(blood_available.unit);
 
-    const RequiredBloodBank2 = await BloodBank.where('id', '==',id ).get();
+    const docRef2 = db.collection("bloodbanks").doc(req.id);
+    const doc2 = await docRef2.get();
+    const RequiredBloodBank2 = doc2.data();
 
     return res
       .status(200)
-      .json({ success: true, BloodUnit: RequiredBloodBank.BloodGroup });
+      .json({ success: true, BloodUnit: RequiredBloodBank2.BloodGroup });
   } catch (error) {
     console.log(error);
     return res.status(400).json({ success: false, message: "process failed" });
