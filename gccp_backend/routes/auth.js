@@ -11,8 +11,8 @@ const router = express.Router();
 router.post("/loginAdmin", async (req, res) => {
   try {
     const admin = req.body;
-    const adminsRef = db.collection('admins');
-    const snapshot = await adminsRef.where('email', '==', admin.email).get();
+    const adminsRef = db.collection("admins");
+    const snapshot = await adminsRef.where("email", "==", admin.email).get();
     if (snapshot.empty) {
       return res
         .status(400)
@@ -20,7 +20,7 @@ router.post("/loginAdmin", async (req, res) => {
     } else {
       let adminData;
       snapshot.forEach((doc) => {
-        adminData={id:doc.id,...doc.data()};
+        adminData = { id: doc.id, ...doc.data() };
       });
       const match = await bcrypt.compare(admin.password, adminData.password);
 
@@ -53,37 +53,30 @@ router.post("/createBloodBank", restrictToAdmin, async (req, res) => {
     const secPassword = await bcrypt.hash(req.body.password, salt);
     const city = _.lowerCase(req.body.city);
 
-    const bloodbanksRef = db.collection('bloodbanks');
+    const bloodbanksRef = db.collection("bloodbanks");
     const bloodBank = {
       name: req.body.name,
       password: secPassword,
       email: req.body.email,
       city: city,
       ContactNumber: req.body.ContactNumber,
-      BloodGroup:{
+      BloodGroup: {
         A_pos: 0,
         A_neg: 0,
         B_pos: 0,
         O_pos: 0,
         AB_pos: 0,
-        B_neg:0,
+        B_neg: 0,
         O_neg: 0,
-        AB_neg: 0
-      }
+        AB_neg: 0,
+      },
     };
 
-    const res = await bloodbanksRef.add(bloodBank);
-    const token = jwt.sign(
-      { id: res.id},
-      process.env.JWT_SECRET
-    );
+    await bloodbanksRef.add(bloodBank);
 
     return res
-    .cookie("token", token, {
-      httpOnly: true,
-    })
-    .status(201)
-    .json({ success: true, message: "process successful" });
+      .status(201)
+      .json({ success: true, message: "process successful" });
   } catch (error) {
     console.log(error);
     return res.status(400).json({ success: false, message: "process failed" });
@@ -93,9 +86,11 @@ router.post("/createBloodBank", restrictToAdmin, async (req, res) => {
 router.post("/loginBloodBank", async (req, res) => {
   try {
     const bloodBank = req.body;
-    const bloodbanksRef = db.collection('bloodbanks');
+    const bloodbanksRef = db.collection("bloodbanks");
 
-    const snapshot = await bloodbanksRef.where('email', '==', bloodBank.email).get();
+    const snapshot = await bloodbanksRef
+      .where("email", "==", bloodBank.email)
+      .get();
 
     if (snapshot.empty) {
       return res
@@ -104,7 +99,7 @@ router.post("/loginBloodBank", async (req, res) => {
     } else {
       let bloodBankData;
       snapshot.forEach((doc) => {
-        bloodBankData={id:doc.id,...doc.data()};
+        bloodBankData = { id: doc.id, ...doc.data() };
       });
       const match = await bcrypt.compare(
         bloodBank.password,
@@ -143,7 +138,7 @@ router.get("/isBloodBankLoggedIn", async (req, res) => {
       return res.status(200).json({ loggedIn: false });
     } else {
       const info = jwt.verify(token, process.env.JWT_SECRET);
-      const docRef = db.collection('bloodbanks').doc(info.id)
+      const docRef = db.collection("bloodbanks").doc(info.id);
       const doc = await docRef.get();
       if (!doc.exists) {
         return res.status(200).json({ loggedIn: false });
